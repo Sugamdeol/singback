@@ -24,6 +24,33 @@ pitch reading. The recorded clip is sent to a Pollinations transcription model
 only when you press **Get feedback**, and the numbers plus the transcript go to
 a text model for one coaching line.
 
+## Models used by default
+
+Both default model ids are served free to users. `GET https://gen.pollinations.ai/v1/models`
+returns them with `paid_only: false`:
+
+```json
+{"id": "openai/whisper-large-v3", "category": "audio",
+ "paid_only": false, "input_modalities": ["audio"], "output_modalities": ["text"],
+ "supported_endpoints": ["/v1/audio/transcriptions"]}
+
+{"id": "openai/gpt-5.4-nano", "category": "text",
+ "paid_only": false, "input_modalities": ["text", "image"], "output_modalities": ["text"],
+ "supported_endpoints": ["/v1/chat/completions", "/text", "/v1/responses", "/v1/messages"]}
+```
+
+They are the constants at the top of `app.js`:
+
+```js
+var TEXT_MODEL = "openai/gpt-5.4-nano";
+var TRANSCRIBE_MODEL = "openai/whisper-large-v3";
+```
+
+`TEXT_MODEL` is sent as the `model` field of the `POST /v1/chat/completions` call,
+`TRANSCRIBE_MODEL` as the `model` form field of the `POST /v1/audio/transcriptions`
+call. The sign-in request asks for the `audio` and `text` model scopes, so a visitor
+grants exactly those two.
+
 ## How this app calls Pollinations
 
 Sign-in is the Pollinations OAuth code flow with PKCE, so there is no key to
