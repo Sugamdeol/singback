@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Singback - practise singing or speaking, get real feedback</title>
+<meta name="description" content="Sing against a target note and see a live pitch trace, or read a script aloud and see which words landed. Built on Pollinations models; you pay with your own Pollen.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23141010'/><path d='M6 18 L10 18 L13 9 L17 23 L20 14 L23 18 L26 18' stroke='%23f0c05a' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root{
+    --paper:#100f12; --panel:#191821; --panel2:#20202b; --rule:#2c2b38;
+    --ink:#f2efe9; --muted:#9d9aab; --accent:#f0c05a; --accent2:#7fd6b0;
+    --bad:#e58a7d; --card:#1b1a24;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html,body{margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+  header{border-bottom:1px solid var(--rule);padding:16px 0 13px}
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  h1{font-size:25px;margin:0;letter-spacing:-.02em;font-weight:650}
+  h1 em{font-style:normal;color:var(--accent)}
+  .tag{color:var(--muted);max-width:64ch;margin:5px 0 0;font-size:14px}
+  .authbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .who{font-size:12.5px;color:var(--muted);max-width:190px;text-align:right}
+  button{font:inherit;font-size:14.5px;cursor:pointer;border-radius:6px}
+  .btn{background:var(--accent);color:#191608;border:1px solid var(--accent);padding:10px 17px;font-weight:600}
+  .btn:hover{filter:brightness(1.08)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;filter:none}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--rule);padding:9px 14px}
+  .btn-ghost:hover{border-color:var(--muted)}
+  .btn-rec{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:11px 20px;font-weight:600}
+  .btn-rec.on{background:var(--bad);border-color:var(--bad);color:#2a0f0a}
+  main{padding:16px 0 18px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{background:transparent;border:1px solid var(--rule);color:var(--muted);padding:9px 16px}
+  .tab[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:#241f14}
+  .panel{border:1px solid var(--rule);background:var(--panel);border-radius:10px;padding:16px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;letter-spacing:.02em}
+  input[type=text],textarea{width:100%;background:var(--panel2);border:1px solid var(--rule);color:var(--ink);border-radius:6px;padding:10px 12px;font:inherit;font-size:15px}
+  textarea{min-height:74px;resize:vertical;line-height:1.5}
+  input[type=text]:focus,textarea:focus{outline:2px solid #3a3420;border-color:var(--accent)}
+  .field{flex:1;min-width:210px}
+  .narrow{max-width:180px}
+  .hint{color:var(--muted);font-size:13px;margin:9px 0 0}
+  .stage{margin-top:0}
+  .canvasBox{position:relative;border:1px solid var(--rule);background:#131219;border-radius:8px;overflow:hidden}
+  canvas{display:block;width:100%;height:172px}
+  .canvasNote{position:absolute;top:9px;left:12px;font-size:12px;color:var(--muted);background:#131219cc;padding:2px 6px;border-radius:4px}
+  .status{min-height:20px;color:var(--muted);font-size:13.5px;margin:11px 0 0}
+  .status.err{color:var(--bad)}
+  .status.ok{color:var(--accent2)}
+  .meter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .pill{border:1px solid var(--rule);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted);background:var(--panel2)}
+  .pill b{color:var(--ink);font-weight:600}
+  .pill.good{border-color:#2f5c49;color:var(--accent2)}
+  .pill.bad{border-color:#5c3630;color:var(--bad)}
+  
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:16px}
+  .stat{border:1px solid var(--rule);background:var(--card);border-radius:8px;padding:12px}
+  .stat .k{font-size:12px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+  .stat .v{font-size:20px;font-weight:640;margin-top:4px}
+  .stat .u{font-size:13px;color:var(--muted);font-weight:400}
+  .notes{margin:18px 0 0;padding:0;list-style:none}
+  .notes li{border-left:3px solid var(--rule);padding:5px 0 5px 11px;color:#ddd9d0;font-size:14px;margin-bottom:6px}
+  .notes li.warn{border-left-color:var(--accent)}
+  .readback{border:1px solid var(--rule);background:var(--card);border-radius:8px;padding:13px;margin-top:0;font-size:14.5px;line-height:1.6}
+  .readback p{margin:0 0 10px}
+  .readback p:last-child{margin-bottom:0}
+  .words{margin-top:14px;line-height:2.1}
+  .words span{border-radius:4px;padding:2px 5px;margin-right:4px;display:inline-block;font-size:14px}
+  .words span.hit{background:#1e3329;color:#a9e3c4}
+  .words span.miss{background:#3a211d;color:#f0b3a7;text-decoration:line-through}
+  .words span.extra{background:#2a2740;color:#c3bcf0;font-style:italic}
+  .tip{border:1px solid #4a3f22;background:#211c11;border-radius:8px;padding:13px;margin-top:0}
+  .tip .k{font-size:12px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;margin-bottom:7px}
+  .tip p{margin:0;font-size:14.5px;line-height:1.55}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}
+  footer{border-top:1px solid var(--rule);padding:11px 0 14px;color:var(--muted);font-size:12.5px}
+  footer a{color:var(--accent2)}
+  .badge{display:inline-block;margin-bottom:8px}
+  details{margin-top:9px;color:var(--muted);font-size:12.5px}
+  details summary{cursor:pointer;color:var(--accent2)}
+  details p{margin:10px 0 0;line-height:1.6}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:20px;align-items:start}
+  .col{display:flex;flex-direction:column;gap:12px;min-width:0}
+  #result .grid{margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .stat{padding:11px 13px}
+  .stat .v{font-size:19px}
+  .notes{margin:0}
+  .tip,.readback{margin-top:0}
+  .words{line-height:1.9;margin-top:8px}
+  @media (max-width:980px){.layout{grid-template-columns:1fr}#result .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+  @media (max-width:720px){.two{grid-template-columns:1fr}h1{font-size:23px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>Sing<em>back</em></h1>
+      <p class="tag">Sing against a target note and watch a live pitch trace, or read a script aloud and see which words landed. Every number is measured in your browser from your own microphone.</p>
+    </div>
+    <div class="authbox">
+      <span class="who" id="who"></span>
+      <button class="btn" id="signBtn" type="button">Sign in with Pollen</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tabSing" role="tab" aria-selected="true" type="button">Sing a note</button>
+    <button class="tab" id="tabSpeak" role="tab" aria-selected="false" type="button">Read aloud</button>
+  </div>
+
+  <section class="layout">
+    <div class="col">
+      <section class="panel" id="setup">
+        <div id="singFields" class="row">
+          <div class="field narrow">
+            <label for="target">Target note</label>
+            <input type="text" id="target" value="A3" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="targetPick">Or pick one</label>
+            <div class="row" style="gap:6px" id="targetPick"></div>
+          </div>
+        </div>
+        <div id="speakFields" class="row" hidden>
+          <div class="field">
+            <label for="script">What you meant to say (a script, or leave empty for open speaking)</label>
+            <textarea id="script" spellcheck="false" placeholder="Good evening. I am calling about the parcel that was left at the wrong door yesterday."></textarea>
+          </div>
+        </div>
+        <p class="hint" id="setupHint">Your microphone is used only in this tab. Audio is not uploaded; only a short clip goes to the transcription model when you ask for a reading.</p>
+      </section>
+
+      <section class="stage">
+        <div class="canvasBox">
+          <canvas id="trace" width="1120" height="200"></canvas>
+          <span class="canvasNote" id="canvasNote">pitch trace appears here while you sing</span>
+        </div>
+
+        <div class="meter">
+          <button class="btn-rec" id="recBtn" type="button">Start listening</button>
+          <span class="pill" id="pillNote">note <b>-</b></span>
+          <span class="pill" id="pillCents">offset <b>-</b></span>
+          <span class="pill" id="pillLevel">level <b>-</b></span>
+          <span class="pill" id="pillTime">time <b>0.0 s</b></span>
+        </div>
+
+        <p class="status" id="status"></p>
+
+        <div class="actions">
+          <button class="btn" id="readBtn" type="button" disabled>Get feedback</button>
+          <button class="btn-ghost" id="clearBtn" type="button">Clear take</button>
+          <button class="btn-ghost" id="copyBtn" type="button" hidden>Copy report</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="col" id="result" hidden>
+      <div class="grid" id="statGrid"></div>
+      <ul class="notes" id="notes"></ul>
+      <div class="tip" id="tipBox" hidden>
+        <div class="k">One thing to change</div>
+        <p id="tipText"></p>
+      </div>
+      <div class="readback" id="readbackBox" hidden></div>
+      <div id="wordsBox" hidden>
+        <h3 class="mono" style="font-size:12px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin:0 0 2px">Script against what was heard</h3>
+        <div class="words" id="words"></div>
+      </div>
+    </section>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="badge" href="https://pollinations.ai/?ref=badge">
+      <img src="https://raw.githubusercontent.com/pollinations/pollinations/main/packages/ui/src/brand/badge-made-with.svg" alt="Made with pollinations.ai" height="26">
+    </a>
+    <p style="margin:5px 0">Singback is front-end only. Pitch is measured locally with the Web Audio API and the YIN algorithm; the transcript and the coaching tip come from Pollinations models paid for from your own Pollen balance.</p>
+    <details>
+      <summary>How this app calls Pollinations</summary>
+      <p>You sign in with Pollinations (OAuth code flow with PKCE, so nothing is pasted and the token stays in this tab's sessionStorage). A take produces one <span class="mono">POST https://gen.pollinations.ai/v1/audio/transcriptions</span> with the recorded clip, then one <span class="mono">POST https://gen.pollinations.ai/v1/chat/completions</span> to <span class="mono">openai/gpt-5.4-nano</span> for the single coaching line. Both models are served with <span class="mono">paid_only: false</span>, so a take costs a fraction of a Pollen from your own balance. The app requests the <span class="mono">audio</span> and <span class="mono">text</span> model scopes on sign-in.</p>
+    </details>
+  </div>
+</footer>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
